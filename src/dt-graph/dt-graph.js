@@ -54,53 +54,84 @@ function propertyToCypher(propertyNode) {
 module.exports = function (RED) {
     // receive updates from the Editor (model changes)
     RED.httpNode.post('/dt-graph', function (req, res) {
-        if (req.body.action == 'deploy') {
-            var deletedNodes = JSON.parse(req.body.deletedNodes);
-            var assets = [];
-            var relationsMap = new Map();
-            var nodes = JSON.parse(req.body.nodes);
-            var assetsNodes = nodes.filter(function (n) { return n.type.startsWith('dt-asset'); });
-            if (assetsNodes.length == 0) {
-                throw new Error('No assets found');
+    if (req.body.action == 'deploy') {
+        var deletedNodes = JSON.parse(req.body.deletedNodes);
+        var assets = [];
+        var relationsMap = new Map();
+        var nodes = JSON.parse(req.body.nodes);
+        var assetsNodes = nodes.filter(function (n) { return n.type.startsWith('dt-asset'); });
+        if (assetsNodes.length == 0) {
+            throw new Error('No assets found');
+        }
+
+        var currentTimestamp = Date.now(); // [AJOUT]
+
+        var _loop_1 = function (assetNode) {
+            var asset = assetNode;
+
+            // Ajout du timestamp à chaque asset
+            asset.timestamp = Date.now(); // [AJOUT]
+
+            var outGoingConnections = nodes.filter(function (n) { return assetNode.wires[0].includes(n.id); });
+            var inComingConnections = nodes.filter(function (n) { return n.wires[0].includes(assetNode.id); });
+
+            for (var _a = 0, outGoingConnections_1 = outGoingConnections; _a < outGoingConnections_1.length; _a++) {
+                var node = outGoingConnections_1[_a];
+                processNode(asset, node, nodes, relationsMap);
             }
-            var _loop_1 = function (assetNode) {
-                var asset = assetNode;
-                var outGoingConnections = nodes.filter(function (n) { return assetNode.wires[0].includes(n.id); });
-                var inComingConnections = nodes.filter(function (n) { return n.wires[0].includes(assetNode.id); });
-                for (var _a = 0, outGoingConnections_1 = outGoingConnections; _a < outGoingConnections_1.length; _a++) {
-                    var node = outGoingConnections_1[_a];
-                    processNode(asset, node, nodes, relationsMap);
-                }
-                for (var _b = 0, inComingConnections_1 = inComingConnections; _b < inComingConnections_1.length; _b++) {
-                    var node = inComingConnections_1[_b];
-                    processNode(asset, node, nodes, relationsMap);
-                }
-                assets.push(asset);
-            };
-            for (var _i = 0, assetsNodes_1 = assetsNodes; _i < assetsNodes_1.length; _i++) {
-                var assetNode = assetsNodes_1[_i];
-                _loop_1(assetNode);
+
+            for (var _b = 0, inComingConnections_1 = inComingConnections; _b < inComingConnections_1.length; _b++) {
+                var node = inComingConnections_1[_b];
+                processNode(asset, node, nodes, relationsMap);
             }
-            var relations = Array.from(relationsMap.values());
-            var cypher = modelToCypher(assets, relations);
-            var deletedNodesC = deletedNodesCypher(deletedNodes);
-            cypher.push.apply(cypher, deletedNodesC);
-            var payload = {
-                'model': {
-                    'projectName': graphNode.projectName,
-                    'projectId': graphNode.projectId,
-                    'version': graphNode.version,
-                    'assets': assets,
-                    'relations': relations,
-                    'deletedNodes': deletedNodes
-                },
-                'cypher': cypher
-            };
-            var message = {
-                payload: payload,
-            };
-            graphNode.send(message);
-            deletedNodes = [];
+
+            assets.push(asset);
+        };
+
+        for (var _i = 0, assetsNodes_1 = assetsNodes; _i < assetsNodes_1.length; _i++) {
+            var assetNode = assetsNodes_1[_i];
+            _loop_1(assetNode);
+        }
+
+        var relations = Array.from(relationsMap.values());
+
+        // Ajout du timestamp à chaque relation
+        relations.forEach(function (rel) {
+            rel.timestamp = Date.now(); // [AJOUT]
+        });
+
+        // Filtrage des assets et relations plus vieux que 15 minutes
+        var fifteenMinutesAgo = Date.now() - 15 * 60 * 1000; // [AJOUT]
+        var filteredAssets = assets.filter(function (a) {
+            return !a.timestamp || a.timestamp >= fifteenMinutesAgo;
+        }); // [AJOUT]
+
+        var filteredRelations = relations.filter(function (r) {
+            return !r.timestamp || r.timestamp >= fifteenMinutesAgo;
+        }); // [AJOUT]
+
+        var cypher = modelToCypher(filteredAssets, filteredRelations); // [MODIF]
+        var deletedNodesC = deletedNodesCypher(deletedNodes);
+        cypher.push.apply(cypher, deletedNodesC);
+
+        var payload = {
+            'model': {
+                'projectName': graphNode.projectName,
+                'projectId': graphNode.projectId,
+                'version': graphNode.version,
+                'assets': assets,
+                'relations': relations,
+                'deletedNodes': deletedNodes
+            },
+            'cypher': cypher
+        };
+
+        var message = {
+            payload: payload,
+        };
+
+        graphNode.send(message);
+        deletedNodes = [];
         }
         else if (req.body.action == 'node_deleted') {
             // deletedNodes.push(req.body.node);
