@@ -9,21 +9,15 @@ module.exports = function (RED) {
         var node = this;
 
         this.on('input', function (msg, send, done) {
-            // Remplacer aContext par la valeur de msg.payload
+            // Ajouter la valeur de aContext par msg.payload
             node.aContext = msg.payload;
 
-            // Construction de l'objet avec la valeur mise à jour
             var data = {
-                payload: {
-                    accessGroup: node.accessGroup,
-                    aContext: node.aContext,
-                    aId: node.aId,
-                    aType: node.aType,
-                },
+                payload: node,
             };
 
             send(data);
-            if (done) done(); // appel à done si défini
+            if (done) done();
         });
     }
 
