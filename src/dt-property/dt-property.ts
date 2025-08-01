@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import * as nodered from "node-red"
+import * as nodered from "node-red";
 import { DTPropertyNode, DTPropertyNodeDef, DTPropertyNodeMessage } from "../resources/types";
 
 export = (RED: nodered.NodeAPI): void => {
@@ -9,14 +9,23 @@ export = (RED: nodered.NodeAPI): void => {
         this.aContext = config.aContext;
         this.aId = config.aId;
         this.aType = config.aType;
-        var node = this;
+
+        const node = this;
+
         this.on('input', (msg: any, send, done): void => {
             node.value = msg.payload;
-            let data: DTPropertyNodeMessage = {
+
+            // Stocker msg.payload dans aContext
+            node.aContext = msg.payload;
+
+            const data: DTPropertyNodeMessage = {
                 payload: node,
             };
+
             send(data);
+            if (done) done();
         });
-    };
+    }
+
     RED.nodes.registerType('dt-property', DTProperty);
 };
