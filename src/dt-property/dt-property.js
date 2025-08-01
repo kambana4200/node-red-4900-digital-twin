@@ -9,11 +9,16 @@ module.exports = function (RED) {
         var node = this;
 
         this.on('input', function (msg, send, done) {
-            // Ajouter la valeur de aContext par msg.payload
-            node.aContext = msg.payload;
+            // Remplacer le champ aContext avec msg.payload seulement pour l'envoi
+            var updatedNode = {
+                accessGroup: node.accessGroup,
+                aContext: msg.payload, // Remplace avec le payload injecté
+                aId: node.aId,
+                aType: node.aType
+            };
 
             var data = {
-                payload: node,
+                payload: updatedNode
             };
 
             send(data);
@@ -23,3 +28,4 @@ module.exports = function (RED) {
 
     RED.nodes.registerType('dt-property', DTProperty);
 };
+
