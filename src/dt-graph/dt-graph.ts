@@ -27,6 +27,8 @@ export = (RED: nodered.NodeAPI): void => {
             for (let assetNode of assetsNodes) {
 
                 let asset = assetNode as DTAssetNodeDef;
+                asset.timestamp = Date.now(); //AJOUT
+
 
                 let outGoingConnections = nodes.filter(n => assetNode.wires[0].includes(n.id));
                 let inComingConnections = nodes.filter(n => n.wires[0].includes(assetNode.id));
@@ -41,6 +43,13 @@ export = (RED: nodered.NodeAPI): void => {
             }
 
             let relations = Array.from(relationsMap.values());
+     
+            const now = Date.now();
+            const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
+
+            assets = assets.filter(asset => now - (asset.timestamp ?? 0) <= FIFTEEN_MINUTES_MS);
+            relations = relations.filter(relation => now - (relation.timestamp ?? 0) <= FIFTEEN_MINUTES_MS);
+
             let cypher = modelToCypher(assets, relations);
             let deletedNodesC = deletedNodesCypher(deletedNodes);
             cypher.push(...deletedNodesC);
@@ -139,6 +148,7 @@ function processNode(asset: DTAssetNodeDef, node: any, nodes: any[], relationsMa
                         direction: relationNode.direction,
                         origins: incomingNodes,
                         targets: outgoingNodes,
+                        timestamp: Date.now(), //AJOUT
                     } as DTRelationNodeDef
                 );
             }
@@ -160,5 +170,3 @@ function deletedNodesCypher(nodes: DTNodeDef[]) {
 function propertyToCypher(propertyNode: DTPropertyNodeDef) {
     return [cypherConverter.createDataPropertyCypher(propertyNode)];
 }
-
-
