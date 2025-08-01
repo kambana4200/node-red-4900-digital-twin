@@ -37,6 +37,7 @@ export interface DTAssetNodeDef extends DTNodeDef {
   properties: DTPropertyNodeDef[];
   actions: DTActionNodeDef[];
   events: DTEventNodeDef[];
+  timestamp?: number; //AJOUT
 }
 
 export interface DTModelNodeDef extends DTNodeDef {
@@ -65,6 +66,7 @@ export interface DTRelationNodeDef extends DTNodeDef {
   direction: string, //-->, <--, <-->
   origins?: DTNodeDef[],
   targets?: DTNodeDef[],
+  timestamp?: number, //AJOUT
 }
 export interface DTVirtualRelationNodeDef<T> {
   id: string;
