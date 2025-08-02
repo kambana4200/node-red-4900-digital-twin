@@ -7,25 +7,24 @@ module.exports = function (RED) {
         this.aId = config.aId;
         this.aType = config.aType;
         var node = this;
-
         this.on('input', function (msg, send, done) {
-            // Remplacer le champ aContext avec msg.payload seulement pour l'envoi
-            var updatedNode = {
-                accessGroup: node.accessGroup,
-                aContext: msg.payload, // Remplace avec le payload injecté
-                aId: node.aId,
-                aType: node.aType
-            };
-
+            node.value = msg.payload;
             var data = {
-                payload: updatedNode
+                payload: {
+                            id: node.id,
+                            type: node.type,
+                            name: node.name,
+                            value: node.value,
+                            accessGroup: node.accessGroup,
+                            aContext: node.aContext,
+                            aId: node.aId,
+                            aType: node.aType
+                 }
             };
-
             send(data);
-            if (done) done();
         });
     }
-
+    ;
     RED.nodes.registerType('dt-property', DTProperty);
 };
-
+//# sourceMappingURL=dt-property.js.map
