@@ -10,32 +10,35 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Cypher = void 0;
+
 var Cypher = /** @class */ (function () {
-    function Cypher() {
-    }
+    function Cypher() {}
+
     Cypher.prototype.convertAssetsRelations = function (assets, relations) {
-        return __spreadArray(__spreadArray([], this.createAssetsCypher(assets), true), this.createRelationsCypher(relations), true);
+        return __spreadArray(
+            __spreadArray([], this.createAssetsCypher(assets), true),
+            this.createRelationsCypher(relations),
+            true
+        );
     };
-    // TODO: just set the node as deleted and not delete it
+
     Cypher.prototype.deletedNodesCypher = function (nodes) {
         var cypher = [];
         for (var _i = 0, nodes_1 = nodes; _i < nodes_1.length; _i++) {
             var node = nodes_1[_i];
             if (node.type == 'dt-asset') {
                 cypher.push("MATCH (n:Asset {nodered_id: \"".concat(node.id, "\"}) DETACH DELETE n"));
-            }
-            else if (node.type == 'dt-property') {
+            } else if (node.type == 'dt-property') {
                 cypher.push("MATCH (n:Property {nodered_id: \"".concat(node.id, "\"}) DETACH DELETE n"));
-            }
-            else if (node.type == 'dt-action') {
+            } else if (node.type == 'dt-action') {
                 cypher.push("MATCH (n:Action {nodered_id: \"".concat(node.id, "\"}) DETACH DELETE n"));
-            }
-            else if (node.type == 'dt-event') {
+            } else if (node.type == 'dt-event') {
                 cypher.push("MATCH (n:Event {nodered_id: \"".concat(node.id, "\"}) DETACH DELETE n"));
             }
         }
         return cypher;
     };
+
     Cypher.prototype.createAssetsCypher = function (assets) {
         var propertyRelationName = 'hasProperty';
         var actionRelationName = 'hasAction';
@@ -44,11 +47,13 @@ var Cypher = /** @class */ (function () {
         var assetAliasCounter = 0;
         var propertyAliasCounter = 0;
         var actionAliasCounter = 0;
+
         for (var _i = 0, assets_1 = assets; _i < assets_1.length; _i++) {
             var asset = assets_1[_i];
             assetAliasCounter++;
             var assetAlias = "a".concat(assetAliasCounter);
             cypher.push("MERGE (".concat(assetAlias, ":Asset {nodered_id: '").concat(asset.id, "'}) \n                SET ").concat(assetAlias, ".name = '").concat(asset.name, "',\n                    ").concat(assetAlias, ".nodered_type = '").concat(asset.type, "'"));
+
             if (asset.properties) {
                 for (var _a = 0, _b = asset.properties; _a < _b.length; _a++) {
                     var property = _b[_a];
@@ -58,6 +63,7 @@ var Cypher = /** @class */ (function () {
                     propertyAliasCounter++;
                 }
             }
+
             if (asset.actions) {
                 for (var _c = 0, _d = asset.actions; _c < _d.length; _c++) {
                     var action = _d[_c];
@@ -70,13 +76,32 @@ var Cypher = /** @class */ (function () {
         }
         return cypher;
     };
+
+    // MODIFICATION : Inclut property.value + autres champs
     Cypher.prototype.createDataPropertyCypher = function (property) {
-        return "MERGE (p:Property {nodered_id: '".concat(property.id, "'}) \n        SET p.value = '").concat(property.value, "'");
+        return "MERGE (p:Property {nodered_id: '".concat(property.id, "'}) \n")
+            + "SET p.value = '".concat(property.value, "',\n")
+            + "    p.name = '".concat(property.name, "',\n")
+            + "    p.a_context = '".concat(property.aContext, "',\n")
+            + "    p.a_id = '".concat(property.aId, "',\n")
+            + "    p.a_type = '".concat(property.aType, "',\n")
+            + "    p.access_group = '".concat(property.accessGroup, "',\n")
+            + "    p.nodered_type = '".concat(property.type, "'");
     };
+
+    // MODIFICATION : Ajoute aussi value dans la création de propriété standard
     Cypher.prototype.createPropertyCypher = function (property, proAlias) {
         if (proAlias === void 0) { proAlias = 'p'; }
-        return "MERGE (".concat(proAlias, ":Property {nodered_id: '").concat(property.id, "'}) \n        SET ").concat(proAlias, ".name = '").concat(property.name, "',\n            ").concat(proAlias, ".a_context = '").concat(property.aContext, "',\n            ").concat(proAlias, ".a_id = '").concat(property.aId, "',\n            ").concat(proAlias, ".a_type = '").concat(property.aType, "',\n            ").concat(proAlias, ".access_group = '").concat(property.accessGroup, "',\n            ").concat(proAlias, ".nodered_type = '").concat(property.type, "'");
+        return "MERGE (".concat(proAlias, ":Property {nodered_id: '").concat(property.id, "'}) \n")
+            + "SET " + proAlias + ".name = '" + property.name + "',\n"
+            + "    " + proAlias + ".a_context = '" + property.aContext + "',\n"
+            + "    " + proAlias + ".a_id = '" + property.aId + "',\n"
+            + "    " + proAlias + ".a_type = '" + property.aType + "',\n"
+            + "    " + proAlias + ".access_group = '" + property.accessGroup + "',\n"
+            + "    " + proAlias + ".nodered_type = '" + property.type + "',\n"
+            + "    " + proAlias + ".value = '" + property.value + "'";
     };
+
     Cypher.prototype.createRelationsCypher = function (relations) {
         var cypher = [];
         var originCounter = 0;
@@ -98,6 +123,7 @@ var Cypher = /** @class */ (function () {
         }
         return cypher;
     };
+
     Cypher.prototype.getRelationDirectionCypher = function (direction, name) {
         if (direction == '-->')
             return "-[:".concat(name, "]->");
@@ -105,7 +131,9 @@ var Cypher = /** @class */ (function () {
             return "<-[:".concat(name, "]-");
         return "<-[:".concat(name, "]->");
     };
+
     return Cypher;
 }());
+
 exports.Cypher = Cypher;
 //# sourceMappingURL=cypher.js.map
